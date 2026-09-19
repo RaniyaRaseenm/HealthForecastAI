@@ -1,11 +1,12 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import joblib
-import pandas as pd
+import numpy as np
 
 # 1. Load the saved model and feature columns
 model = joblib.load("../artifacts/risk_model.pkl")
 feature_columns = joblib.load("../artifacts/feature_columns.pkl")
+
 # 2. Create the FastAPI app
 app = FastAPI(title="Patient Risk Prediction API")
 
@@ -30,19 +31,15 @@ def read_root():
 # 6. Prediction endpoint
 @app.post("/predict-risk")
 def predict_risk(patient: PatientData):
-    # Convert input dict to DataFrame
-    input_df = pd.DataFrame([patient.data])
-    
-    # Ensure all expected columns are present, fill missing ones with 0
-    for col in feature_columns:
-        if col not in input_df.columns:
-            input_df[col] = 0
-    input_df = input_df[feature_columns]  # reorder columns to match training
-    
+    # Build a feature vector in the exact order the model expects,
+    # filling missing values with 0 - no pandas needed
+    row = [patient.data.get(col, 0) for col in feature_columns]
+    input_array = np.array([row], dtype=float)
+
     # Predict risk score
-    risk_score = model.predict_proba(input_df)[:, 1][0]
+    risk_score = model.predict_proba(input_array)[:, 1][0]
     risk_category = categorize_risk(risk_score)
-    
+
     return {
         "risk_score": round(float(risk_score), 4),
         "risk_category": risk_category
