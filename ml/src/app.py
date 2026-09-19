@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import joblib
 import numpy as np
@@ -9,6 +10,14 @@ feature_columns = joblib.load("../artifacts/feature_columns.pkl")
 
 # 2. Create the FastAPI app
 app = FastAPI(title="Patient Risk Prediction API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5500"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 3. Define the input format (patient data as a dictionary)
 class PatientData(BaseModel):
